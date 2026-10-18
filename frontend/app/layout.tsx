@@ -25,6 +25,8 @@ export const metadata: Metadata = {
   description: "Modern real-time chat application built with Next.js, Node.js/Express, Socket.io, Prisma, and PostgreSQL in Docker.",
 };
 
+import { TooltipProvider } from "@/components/ui/tooltip";
+
 export default function RootLayout({
   children,
 }: {
@@ -36,7 +38,7 @@ export default function RootLayout({
       className={`${spaceGrotesk.variable} ${plusJakartaSans.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="h-full flex flex-col bg-background text-foreground antialiased selection:bg-primary/20">
-        {children}
+        <TooltipProvider>{children}</TooltipProvider>
       </body>
     </html>
   );
