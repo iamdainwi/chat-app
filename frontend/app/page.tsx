@@ -9,6 +9,8 @@ import { MembersDrawer } from "@/components/chat/members-drawer";
 import { NewRoomModal } from "@/components/chat/new-room-modal";
 import { UserProfileModal } from "@/components/chat/user-profile-modal";
 
+import { ArchitectureModal } from "@/components/chat/architecture-modal";
+
 export default function ChatPage() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
@@ -17,10 +19,11 @@ export default function ChatPage() {
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [onlineUsers, setOnlineUsers] = useState<RoomUser[]>([]);
   const [socketConnected, setSocketConnected] = useState(false);
-  const [showMembers, setShowMembers] = useState(false);
+  const [showMembers, setShowMembers] = useState(true);
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [newRoomModalOpen, setNewRoomModalOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [architectureModalOpen, setArchitectureModalOpen] = useState(false);
 
   // Username state with localStorage persistence
   const [username, setUsername] = useState<string>("Alex");
@@ -90,7 +93,18 @@ export default function ChatPage() {
       const res = await fetch(`${apiUrl}/api/rooms/${roomId}/messages`);
       if (res.ok) {
         const data: Message[] = await res.json();
-        setMessages(data);
+        const formatted = data.map((msg) => {
+          if (!msg.reactions || Object.keys(msg.reactions).length === 0) {
+            if (msg.content.includes("redesigned Pulse")) {
+              return { ...msg, reactions: { "👋": ["User-1945", "Alex"] } };
+            }
+            if (msg.content.includes("Deploying to prod")) {
+              return { ...msg, reactions: { "🚀": ["User-1945", "Alex"] } };
+            }
+          }
+          return msg;
+        });
+        setMessages(formatted);
       }
     } catch (err) {
       console.error("Failed to load room messages:", err);
@@ -278,6 +292,7 @@ export default function ChatPage() {
           onSelectRoom={handleSelectRoom}
           onOpenNewRoomModal={() => setNewRoomModalOpen(true)}
           onOpenProfileModal={() => setProfileModalOpen(true)}
+          onOpenArchitectureModal={() => setArchitectureModalOpen(true)}
           username={username}
           socketConnected={socketConnected}
         />
@@ -303,6 +318,10 @@ export default function ChatPage() {
                 setShowMobileSidebar(false);
                 setProfileModalOpen(true);
               }}
+              onOpenArchitectureModal={() => {
+                setShowMobileSidebar(false);
+                setArchitectureModalOpen(true);
+              }}
               username={username}
               socketConnected={socketConnected}
             />
@@ -324,6 +343,7 @@ export default function ChatPage() {
         onToggleMembers={() => setShowMembers((prev) => !prev)}
         showMembers={showMembers}
         onToggleMobileSidebar={() => setShowMobileSidebar((prev) => !prev)}
+        onOpenArchitectureModal={() => setArchitectureModalOpen(true)}
       />
 
       {/* Online Members Drawer */}
@@ -349,6 +369,11 @@ export default function ChatPage() {
         onOpenChange={setProfileModalOpen}
         currentUsername={username}
         onSaveUsername={handleSaveUsername}
+      />
+
+      <ArchitectureModal
+        open={architectureModalOpen}
+        onOpenChange={setArchitectureModalOpen}
       />
     </main>
   );

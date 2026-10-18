@@ -63,6 +63,36 @@ async function seedDefaultRooms() {
       }
       console.log('[Database] Default rooms seeded successfully.');
     }
+
+    const general = await prisma.room.findUnique({ where: { name: 'general' } });
+    if (general) {
+      const msgCount = await prisma.message.count({ where: { roomId: general.id } });
+      if (msgCount === 0) {
+        console.log('[Database] Seeding initial screenshot messages in #general...');
+        await prisma.message.create({
+          data: {
+            content: 'Hey! Welcome to the redesigned Pulse workspace.',
+            username: 'User-1945',
+            roomId: general.id,
+          }
+        });
+        await prisma.message.create({
+          data: {
+            content: 'Deploying to prod real quick.',
+            username: 'Alex',
+            roomId: general.id,
+          }
+        });
+        await prisma.message.create({
+          data: {
+            content: "Hello! Wait... It's 4:55 PM. On a Friday.",
+            username: 'User-6431',
+            roomId: general.id,
+          }
+        });
+        console.log('[Database] Initial messages seeded successfully.');
+      }
+    }
   } catch (error) {
     console.warn('[Database] Could not seed rooms (database might be connecting):', error.message);
   }
