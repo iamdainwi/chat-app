@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Hash, Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, Radio } from "lucide-react";
 
 interface NewRoomModalProps {
   open: boolean;
@@ -34,7 +34,7 @@ export function NewRoomModal({ open, onOpenChange, onRoomCreated }: NewRoomModal
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!cleanSlug) {
-      setError("Please enter a valid room name");
+      setError("Please enter a valid channel name");
       return;
     }
 
@@ -51,7 +51,7 @@ export function NewRoomModal({ open, onOpenChange, onRoomCreated }: NewRoomModal
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Failed to create room");
+        throw new Error(data.error || "Failed to create channel");
       }
 
       const createdRoom = await response.json();
@@ -72,16 +72,16 @@ export function NewRoomModal({ open, onOpenChange, onRoomCreated }: NewRoomModal
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md bg-card border-border">
         <DialogHeader>
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-primary/10 text-primary">
-              <Hash className="size-5" />
+          <div className="flex items-center gap-2.5">
+            <div className="size-8 rounded-md bg-primary text-primary-foreground flex items-center justify-center font-bold">
+              <Radio className="size-4" />
             </div>
             <div>
-              <DialogTitle className="text-lg">Create a Channel</DialogTitle>
+              <DialogTitle className="text-base font-heading font-bold">Create Frequency Channel</DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                Channels are where discussions take place.
+                New real-time broadcast channel for team transmission.
               </DialogDescription>
             </div>
           </div>
@@ -89,64 +89,70 @@ export function NewRoomModal({ open, onOpenChange, onRoomCreated }: NewRoomModal
 
         <form onSubmit={handleCreate} className="space-y-4 pt-2">
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Channel Name
+            <label className="text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+              Channel Identifier
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-mono font-bold text-sm">
                 #
               </span>
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. project-updates"
-                className="pl-7"
+                placeholder="e.g. system-core"
+                className="pl-7 font-mono text-sm bg-background border-border rounded-md"
                 autoFocus
               />
             </div>
             {name && (
-              <p className="text-xs text-muted-foreground">
-                Will be created as <span className="font-mono text-primary font-medium">#{cleanSlug}</span>
+              <p className="text-xs text-muted-foreground font-mono">
+                Slug: <span className="text-primary font-bold">#{cleanSlug}</span>
               </p>
             )}
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Topic / Description <span className="text-muted-foreground/60">(optional)</span>
+            <label className="text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+              Topic / Purpose <span className="text-muted-foreground/60">(optional)</span>
             </label>
             <Input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="What is this channel about?"
+              placeholder="What will be discussed here?"
+              className="bg-background border-border rounded-md"
             />
           </div>
 
           {error && (
-            <div className="p-2.5 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs">
-              {error}
+            <div className="p-2.5 rounded-md bg-destructive/10 border border-destructive text-destructive text-xs font-mono">
+              [ERROR] {error}
             </div>
           )}
 
-          <DialogFooter className="mt-4 pt-2">
+          <DialogFooter className="mt-4 pt-2 border-t border-border">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isLoading}
+              className="font-mono text-xs border-border"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading || !cleanSlug}>
+            <Button
+              type="submit"
+              disabled={isLoading || !cleanSlug}
+              className="font-mono text-xs font-semibold"
+            >
               {isLoading ? (
                 <>
-                  <Loader2 className="size-4 animate-spin mr-1.5" />
+                  <Loader2 className="size-3.5 animate-spin mr-1.5" />
                   Creating...
                 </>
               ) : (
                 <>
-                  <Plus className="size-4 mr-1.5" />
-                  Create Channel
+                  <Plus className="size-3.5 mr-1.5" />
+                  Initialize Channel
                 </>
               )}
             </Button>
