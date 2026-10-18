@@ -274,9 +274,9 @@ export function ChatArea({
                   <Message
                     key={group.id}
                     align={group.isMe ? "end" : "start"}
-                    className="group relative"
+                    className="group/message relative"
                   >
-                    <MessageAvatar className="self-start">
+                    <MessageAvatar>
                       <Avatar size="sm" className="size-8 rounded-full">
                         {group.userAvatarUrl ? (
                           <AvatarImage src={group.userAvatarUrl} alt={group.username} />
@@ -289,19 +289,19 @@ export function ChatArea({
                       </Avatar>
                     </MessageAvatar>
 
-                    <MessageContent>
+                    <MessageContent className={group.isMe ? "items-end" : "items-start"}>
                       <MessageHeader
                         className={`font-sans text-xs px-1 gap-1.5 ${
-                          group.isMe ? "justify-end" : "justify-start"
+                          group.isMe ? "justify-end flex-row-reverse" : "justify-start"
                         }`}
                       >
                         {group.isMe ? (
                           <>
-                            <span className="text-slate-400 text-[11px] font-mono">
-                              {group.formattedTime}
-                            </span>
                             <span className="font-bold text-slate-900">
                               {currentUsername} (You)
+                            </span>
+                            <span className="text-slate-400 text-[11px] font-mono">
+                              {group.formattedTime}
                             </span>
                           </>
                         ) : (
@@ -314,64 +314,72 @@ export function ChatArea({
                         )}
                       </MessageHeader>
 
-                      <BubbleGroup className="flex flex-col gap-2">
+                      <BubbleGroup className={`w-full flex flex-col gap-1.5 ${group.isMe ? "items-end" : "items-start"}`}>
                         {group.messages.map((msg) => {
                           const reactionsMap = msg.reactions || {};
                           const hasReactions = Object.keys(reactionsMap).length > 0;
 
                           return (
-                            <div key={msg.id} className="relative group/bubble-container">
-                              <Bubble variant={group.isMe ? "default" : "muted"}>
-                                <BubbleContent
-                                  className={`text-sm leading-relaxed px-4 py-2.5 rounded-2xl font-normal shadow-2xs ${
-                                    group.isMe
-                                      ? "bg-[#4f46e5] text-white"
-                                      : "bg-[#f1f5f9] text-slate-900"
+                            <div
+                              key={msg.id}
+                              className={`w-full flex ${group.isMe ? "justify-end" : "justify-start"}`}
+                            >
+                              <div className="relative group/bubble-container flex items-center max-w-[75%]">
+                                <Bubble
+                                  variant={group.isMe ? "default" : "muted"}
+                                  align={group.isMe ? "end" : "start"}
+                                >
+                                  <BubbleContent
+                                    className={`text-sm leading-relaxed px-4 py-2.5 rounded-2xl font-normal shadow-2xs whitespace-pre-wrap break-words ${
+                                      group.isMe
+                                        ? "bg-[#4f46e5] text-white rounded-tr-xs"
+                                        : "bg-[#f1f5f9] text-slate-900 rounded-tl-xs"
+                                    }`}
+                                  >
+                                    {msg.content}
+                                  </BubbleContent>
+
+                                  {hasReactions && (
+                                    <BubbleReactions
+                                      align={group.isMe ? "end" : "start"}
+                                      aria-label="Message reactions"
+                                      className="bg-white border border-slate-200 text-slate-700 shadow-2xs rounded-full px-2 py-0.5"
+                                    >
+                                      {Object.entries(reactionsMap).map(([emoji, users]) => (
+                                        <button
+                                          key={emoji}
+                                          type="button"
+                                          onClick={() => onReactMessage(msg.id, emoji)}
+                                          className="inline-flex items-center gap-1 text-xs"
+                                        >
+                                          <span>{emoji}</span>
+                                          <span className="font-mono text-[10px] font-semibold text-slate-600">
+                                            {users.length}
+                                          </span>
+                                        </button>
+                                      ))}
+                                    </BubbleReactions>
+                                  )}
+                                </Bubble>
+
+                                {/* Hover Quick Reaction Toolbar */}
+                                <div
+                                  className={`absolute top-1/2 -translate-y-1/2 opacity-0 group-hover/bubble-container:opacity-100 transition-opacity flex items-center gap-0.5 p-0.5 rounded-lg bg-white border border-slate-200 shadow-md z-20 ${
+                                    group.isMe ? "right-full mr-2" : "left-full ml-2"
                                   }`}
                                 >
-                                  {msg.content}
-                                </BubbleContent>
-
-                                {hasReactions && (
-                                  <BubbleReactions
-                                    align={group.isMe ? "end" : "start"}
-                                    aria-label="Message reactions"
-                                    className="bg-white border border-slate-200 text-slate-700 shadow-2xs rounded-full px-2 py-0.5"
-                                  >
-                                    {Object.entries(reactionsMap).map(([emoji, users]) => (
-                                      <button
-                                        key={emoji}
-                                        type="button"
-                                        onClick={() => onReactMessage(msg.id, emoji)}
-                                        className="inline-flex items-center gap-1 text-xs"
-                                      >
-                                        <span>{emoji}</span>
-                                        <span className="font-mono text-[10px] font-semibold text-slate-600">
-                                          {users.length}
-                                        </span>
-                                      </button>
-                                    ))}
-                                  </BubbleReactions>
-                                )}
-                              </Bubble>
-
-                              {/* Hover Quick Reaction Toolbar */}
-                              <div
-                                className={`absolute top-0 opacity-0 group-hover/bubble-container:opacity-100 transition-opacity flex items-center gap-0.5 p-0.5 rounded-lg bg-white border border-slate-200 shadow-md z-20 ${
-                                  group.isMe ? "-left-28 -translate-y-1" : "-right-28 -translate-y-1"
-                                }`}
-                              >
-                                {REACTION_EMOJIS.map((emoji) => (
-                                  <button
-                                    key={emoji}
-                                    type="button"
-                                    onClick={() => onReactMessage(msg.id, emoji)}
-                                    className="size-6 flex items-center justify-center text-xs hover:bg-slate-100 rounded transition-transform active:scale-90"
-                                    title={`React with ${emoji}`}
-                                  >
-                                    {emoji}
-                                  </button>
-                                ))}
+                                  {REACTION_EMOJIS.map((emoji) => (
+                                    <button
+                                      key={emoji}
+                                      type="button"
+                                      onClick={() => onReactMessage(msg.id, emoji)}
+                                      className="size-6 flex items-center justify-center text-xs hover:bg-slate-100 rounded transition-transform active:scale-90"
+                                      title={`React with ${emoji}`}
+                                    >
+                                      {emoji}
+                                    </button>
+                                  ))}
+                                </div>
                               </div>
                             </div>
                           );
