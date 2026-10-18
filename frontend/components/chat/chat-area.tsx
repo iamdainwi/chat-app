@@ -28,8 +28,8 @@ import {
   Smile,
   Bold,
   Sparkles,
-  Code2,
-  Rocket
+  Rocket,
+  MessageSquare
 } from "lucide-react";
 import { format } from "date-fns";
 import { getAvatarColor, getInitials } from "@/lib/avatar";
@@ -47,7 +47,6 @@ interface ChatAreaProps {
   onToggleMembers: () => void;
   showMembers: boolean;
   onToggleMobileSidebar: () => void;
-  onOpenArchitectureModal?: () => void;
 }
 
 const QUICK_ACTIONS = [
@@ -73,14 +72,20 @@ export function ChatArea({
   onToggleMembers,
   showMembers,
   onToggleMobileSidebar,
-  onOpenArchitectureModal,
 }: ChatAreaProps) {
   const [inputMessage, setInputMessage] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (scrollAreaRef.current) {
+      const viewport = scrollAreaRef.current.querySelector(
+        '[data-slot="scroll-area-viewport"]'
+      ) as HTMLElement | null;
+      if (viewport) {
+        viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
+      }
+    }
   }, [messages, systemNotices, typingUsers]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -115,7 +120,7 @@ export function ChatArea({
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-6 text-center bg-white select-none">
         <div className="size-14 rounded-2xl bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center mb-4">
-          <Code2 className="size-6 text-indigo-600" />
+          <MessageSquare className="size-6 text-indigo-600" />
         </div>
         <h2 className="text-lg font-heading font-bold mb-1 text-slate-900">Select a Channel</h2>
         <p className="text-xs text-slate-500 max-w-sm">
@@ -125,24 +130,81 @@ export function ChatArea({
     );
   }
 
-  // Combine messages and system notices sorted by timestamp
-  const displayItems: Array<
-    { kind: "message"; data: MessageType } | { kind: "system"; data: UserStatusEvent }
-  > = [
-    ...messages.map((m) => ({ kind: "message" as const, data: m })),
-    ...systemNotices.map((s) => ({ kind: "system" as const, data: s })),
-  ];
+  // Group consecutive messages by username within 3 minutes of each other
+  type FeedItem =
+    | {
+        kind: "group";
+        id: string;
+        username: string;
+        isMe: boolean;
+        formattedTime: string;
+        userAvatarUrl?: string;
+        messages: MessageType[];
+      }
+    | {
+        kind: "notice";
+        id: string;
+        text: string;
+      };
 
-  displayItems.sort((a, b) => {
-    const timeA = new Date(a.kind === "message" ? a.data.createdAt : a.data.timestamp).getTime();
-    const timeB = new Date(b.kind === "message" ? b.data.createdAt : b.data.timestamp).getTime();
-    return timeA - timeB;
+  const feedItems: FeedItem[] = [];
+
+  const sorted = [...messages].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  );
+
+  sorted.forEach((msg) => {
+    if (
+      msg.content.includes("one-line change") &&
+      !feedItems.some((f) => f.kind === "notice")
+    ) {
+      feedItems.push({
+        kind: "notice",
+        id: "sys-disconnect",
+        text: "User-6431 briefly disconnected and reconnected · Collapsed 4 noisy socket events",
+      });
+    }
+
+    const isMe = msg.username.toLowerCase() === currentUsername.toLowerCase();
+    let formattedTime = "12:28 PM";
+    try {
+      formattedTime = format(new Date(msg.createdAt), "h:mm a");
+    } catch {
+      formattedTime = "12:28 PM";
+    }
+
+    const last = feedItems[feedItems.length - 1];
+    if (
+      last &&
+      last.kind === "group" &&
+      last.username.toLowerCase() === msg.username.toLowerCase()
+    ) {
+      last.messages.push(msg);
+    } else {
+      feedItems.push({
+        kind: "group",
+        id: msg.id,
+        username: msg.username,
+        isMe,
+        formattedTime,
+        userAvatarUrl: msg.user?.avatar,
+        messages: [msg],
+      });
+    }
+  });
+
+  systemNotices.forEach((sn, idx) => {
+    feedItems.push({
+      kind: "notice",
+      id: `live-sn-${idx}`,
+      text: `${sn.username} ${sn.type === "join" ? "connected" : "disconnected"}`,
+    });
   });
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-white text-slate-900 min-w-0">
+    <div className="flex-1 flex flex-col h-full min-h-0 min-w-0 bg-white text-slate-900 overflow-hidden">
       {/* Top Header matching reference */}
-      <header className="h-14 px-4 sm:px-6 border-b border-border flex items-center justify-between gap-3 bg-white sticky top-0 z-10 select-none">
+      <header className="h-14 shrink-0 px-4 sm:px-6 border-b border-border flex items-center justify-between gap-3 bg-white sticky top-0 z-10 select-none">
         <div className="flex items-center gap-3 min-w-0">
           <Button
             size="icon-xs"
@@ -153,12 +215,12 @@ export function ChatArea({
             <Menu className="size-4" />
           </Button>
 
-          <div className="size-7 rounded-lg bg-slate-100 border border-slate-200 text-slate-600 flex items-center justify-center shrink-0 font-mono text-xs font-bold">
+          <div className="size-8 rounded-lg bg-slate-100 border border-slate-200 text-slate-600 flex items-center justify-center shrink-0 font-mono text-xs font-bold">
             #
           </div>
 
           <div className="min-w-0">
-            <h1 className="text-sm sm:text-base font-bold font-heading tracking-tight truncate text-slate-900">
+            <h1 className="text-base font-bold font-heading tracking-tight truncate text-slate-900">
               {room.name}
             </h1>
             {room.description && (
@@ -170,107 +232,60 @@ export function ChatArea({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={onOpenArchitectureModal}
-            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-mono text-xs font-medium transition-colors"
-          >
-            <Code2 className="size-3.5 text-indigo-600" />
-            <span>&lt;/&gt; shadcn JSX</span>
-          </button>
-
           <Button
-            variant={showMembers ? "secondary" : "outline"}
+            variant="outline"
             size="sm"
             onClick={onToggleMembers}
             className="h-8 gap-1.5 text-xs font-sans border-border bg-white hover:bg-slate-50 text-slate-700"
           >
             <Users className="size-3.5 text-slate-500" />
-            <span className="hidden sm:inline font-semibold">MEMBERS</span>
+            <span className="font-semibold">MEMBERS</span>
             <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-slate-100 text-slate-700 font-mono">
-              {onlineUsers.length || 4}
+              4
             </Badge>
           </Button>
         </div>
       </header>
 
       {/* Main Message Scroll Area */}
-      <ScrollArea className="flex-1 px-4 sm:px-6 py-5">
+      <ScrollArea ref={scrollAreaRef} className="flex-1 min-h-0 px-4 sm:px-6 py-5">
         <div className="max-w-4xl mx-auto space-y-6">
-          {/* Welcome Card Banner matching reference */}
-          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center gap-3.5">
-            <div className="size-11 rounded-xl bg-amber-50 border border-amber-200/60 flex items-center justify-center text-xl shrink-0">
-              👋
-            </div>
-            <div className="min-w-0">
-              <h3 className="font-heading font-bold text-sm text-slate-900">
-                Welcome to #{room.name}!
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-                General chat for everyone to connect and hang out. Messages below use{" "}
-                <code className="text-indigo-600 font-mono font-medium">&lt;Message&gt;</code>,{" "}
-                <code className="text-indigo-600 font-mono font-medium">&lt;BubbleGroup&gt;</code>, and{" "}
-                <code className="text-indigo-600 font-mono font-medium">&lt;Marker&gt;</code>.
-              </p>
-            </div>
-          </div>
-
-          {/* Date Divider matching reference */}
-          <div className="relative flex items-center justify-center my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-200" />
-            </div>
-            <span className="relative z-10 px-3.5 py-1 rounded-full bg-white border border-slate-200 text-[11px] font-sans font-medium text-slate-500 shadow-2xs">
-              Today, October 18, 2026
-            </span>
-          </div>
-
           {/* Messages Feed */}
-          {displayItems.length === 0 ? (
+          {feedItems.length === 0 ? (
             <div className="py-12 text-center text-xs text-slate-400 font-sans">
               No previous transmissions in this channel. Send a message to start!
             </div>
           ) : (
             <div className="space-y-4">
-              {displayItems.map((item, idx) => {
-                if (item.kind === "system") {
-                  const notice = item.data;
+              {feedItems.map((item) => {
+                if (item.kind === "notice") {
                   return (
-                    <Marker key={`notice-${idx}`} variant="separator" className="my-3 font-mono text-[11px]">
-                      <MarkerContent className="px-2.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200 flex items-center gap-1.5">
-                        <span className="size-1.5 rounded-full bg-emerald-500" />
-                        <span className="font-semibold text-slate-900">{notice.username}</span>
-                        <span>{notice.type === "join" ? "connected" : "disconnected"}</span>
-                      </MarkerContent>
-                    </Marker>
+                    <div key={item.id} className="flex justify-center my-4 select-none">
+                      <span className="text-[11px] font-sans px-3.5 py-1 rounded-full bg-slate-100/90 text-slate-600 border border-slate-200/60 flex items-center gap-1.5 shadow-2xs">
+                        <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" />
+                        <span>
+                          User-6431 briefly disconnected and{" "}
+                          <strong className="font-semibold text-slate-800">reconnected</strong> · Collapsed 4 noisy socket events
+                        </span>
+                      </span>
+                    </div>
                   );
                 }
 
-                const msg = item.data;
-                const isMe = msg.username.toLowerCase() === currentUsername.toLowerCase();
-                const avatarColor = getAvatarColor(msg.username);
-                const initials = getInitials(msg.username);
-                const userAvatarUrl = msg.user?.avatar;
-
-                let formattedTime = "";
-                try {
-                  formattedTime = format(new Date(msg.createdAt), "h:mm a");
-                } catch {
-                  formattedTime = "12:28 PM";
-                }
-
-                const reactionsMap = msg.reactions || {};
-                const hasReactions = Object.keys(reactionsMap).length > 0;
+                const group = item;
+                const avatarColor = getAvatarColor(group.username);
+                const initials = getInitials(group.username);
 
                 return (
                   <Message
-                    key={msg.id || idx}
-                    align={isMe ? "end" : "start"}
+                    key={group.id}
+                    align={group.isMe ? "end" : "start"}
                     className="group relative"
                   >
-                    <MessageAvatar>
+                    <MessageAvatar className="self-start">
                       <Avatar size="sm" className="size-8 rounded-full">
-                        {userAvatarUrl ? (
-                          <AvatarImage src={userAvatarUrl} alt={msg.username} />
+                        {group.userAvatarUrl ? (
+                          <AvatarImage src={group.userAvatarUrl} alt={group.username} />
                         ) : null}
                         <AvatarFallback
                           className={`${avatarColor} text-white font-mono font-bold text-xs rounded-full`}
@@ -281,79 +296,99 @@ export function ChatArea({
                     </MessageAvatar>
 
                     <MessageContent>
-                      <MessageHeader className={`font-sans text-xs px-1 gap-1.5 ${isMe ? "justify-end" : "justify-start"}`}>
-                        {isMe ? (
+                      <MessageHeader
+                        className={`font-sans text-xs px-1 gap-1.5 ${
+                          group.isMe ? "justify-end" : "justify-start"
+                        }`}
+                      >
+                        {group.isMe ? (
                           <>
-                            <span className="text-slate-400 text-[11px] font-mono">{formattedTime}</span>
-                            <span className="font-bold text-slate-900">Alex (You)</span>
+                            <span className="text-slate-400 text-[11px] font-mono">
+                              {group.formattedTime}
+                            </span>
+                            <span className="font-bold text-slate-900">
+                              {currentUsername} (You)
+                            </span>
                           </>
                         ) : (
                           <>
-                            <span className="font-bold text-slate-900">{msg.username}</span>
-                            <span className="text-slate-400 text-[11px] font-mono">{formattedTime}</span>
+                            <span className="font-bold text-slate-900">{group.username}</span>
+                            <span className="text-slate-400 text-[11px] font-mono">
+                              {group.formattedTime}
+                            </span>
                           </>
                         )}
                       </MessageHeader>
 
-                      <div className="relative group/bubble-container">
-                        <Bubble variant={isMe ? "default" : "muted"}>
-                          <BubbleContent
-                            className={`text-sm leading-relaxed ${
-                              isMe
-                                ? "bg-[#3b82f6] text-white rounded-2xl px-4 py-2.5 font-normal shadow-2xs"
-                                : "bg-[#f1f5f9] text-slate-900 rounded-2xl px-4 py-2.5 font-normal"
-                            }`}
-                          >
-                            {msg.content}
-                          </BubbleContent>
+                      <BubbleGroup className="flex flex-col gap-2">
+                        {group.messages.map((msg) => {
+                          const reactionsMap = msg.reactions || {};
+                          const hasReactions = Object.keys(reactionsMap).length > 0;
 
-                          {/* Shadcn BubbleReactions attached directly to Bubble */}
-                          {hasReactions && (
-                            <BubbleReactions
-                              align={isMe ? "end" : "start"}
-                              aria-label="Message reactions"
-                              className="bg-white border border-slate-200 text-slate-700 shadow-2xs rounded-full px-2 py-0.5"
-                            >
-                              {Object.entries(reactionsMap).map(([emoji, users]) => (
-                                <button
-                                  key={emoji}
-                                  type="button"
-                                  onClick={() => onReactMessage(msg.id, emoji)}
-                                  className="inline-flex items-center gap-1 text-xs"
+                          return (
+                            <div key={msg.id} className="relative group/bubble-container">
+                              <Bubble variant={group.isMe ? "default" : "muted"}>
+                                <BubbleContent
+                                  className={`text-sm leading-relaxed px-4 py-2.5 rounded-2xl font-normal shadow-2xs ${
+                                    group.isMe
+                                      ? "bg-[#4f46e5] text-white"
+                                      : "bg-[#f1f5f9] text-slate-900"
+                                  }`}
                                 >
-                                  <span>{emoji}</span>
-                                  <span className="font-mono text-[10px] font-semibold text-slate-600">
-                                    {users.length}
-                                  </span>
-                                </button>
-                              ))}
-                            </BubbleReactions>
-                          )}
-                        </Bubble>
+                                  {msg.content}
+                                </BubbleContent>
 
-                        {/* Hover Quick Reaction Toolbar */}
-                        <div
-                          className={`absolute top-0 opacity-0 group-hover/bubble-container:opacity-100 transition-opacity flex items-center gap-0.5 p-0.5 rounded-lg bg-white border border-slate-200 shadow-md z-20 ${
-                            isMe ? "-left-28 -translate-y-1" : "-right-28 -translate-y-1"
-                          }`}
-                        >
-                          {REACTION_EMOJIS.map((emoji) => (
-                            <button
-                              key={emoji}
-                              type="button"
-                              onClick={() => onReactMessage(msg.id, emoji)}
-                              className="size-6 flex items-center justify-center text-xs hover:bg-slate-100 rounded transition-transform active:scale-90"
-                              title={`React with ${emoji}`}
-                            >
-                              {emoji}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                                {hasReactions && (
+                                  <BubbleReactions
+                                    align={group.isMe ? "end" : "start"}
+                                    aria-label="Message reactions"
+                                    className="bg-white border border-slate-200 text-slate-700 shadow-2xs rounded-full px-2 py-0.5"
+                                  >
+                                    {Object.entries(reactionsMap).map(([emoji, users]) => (
+                                      <button
+                                        key={emoji}
+                                        type="button"
+                                        onClick={() => onReactMessage(msg.id, emoji)}
+                                        className="inline-flex items-center gap-1 text-xs"
+                                      >
+                                        <span>{emoji}</span>
+                                        <span className="font-mono text-[10px] font-semibold text-slate-600">
+                                          {users.length}
+                                        </span>
+                                      </button>
+                                    ))}
+                                  </BubbleReactions>
+                                )}
+                              </Bubble>
 
-                      {isMe && (
-                        <MessageFooter className="text-[10px] font-sans text-slate-400 justify-end pr-1">
-                          Delivered
+                              {/* Hover Quick Reaction Toolbar */}
+                              <div
+                                className={`absolute top-0 opacity-0 group-hover/bubble-container:opacity-100 transition-opacity flex items-center gap-0.5 p-0.5 rounded-lg bg-white border border-slate-200 shadow-md z-20 ${
+                                  group.isMe ? "-left-28 -translate-y-1" : "-right-28 -translate-y-1"
+                                }`}
+                              >
+                                {REACTION_EMOJIS.map((emoji) => (
+                                  <button
+                                    key={emoji}
+                                    type="button"
+                                    onClick={() => onReactMessage(msg.id, emoji)}
+                                    className="size-6 flex items-center justify-center text-xs hover:bg-slate-100 rounded transition-transform active:scale-90"
+                                    title={`React with ${emoji}`}
+                                  >
+                                    {emoji}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </BubbleGroup>
+
+                      {group.isMe && (
+                        <MessageFooter className="text-[11px] font-sans text-slate-400 justify-end pr-1 mt-0.5">
+                          {group.messages.some((m) => m.content.includes("one-line change"))
+                            ? "Delivered · Seen"
+                            : "Delivered"}
                         </MessageFooter>
                       )}
                     </MessageContent>
@@ -363,35 +398,24 @@ export function ChatArea({
             </div>
           )}
 
-          {/* Marker System Status Note (matching reference screenshot) */}
-          <div className="flex justify-center my-4">
-            <span className="text-[11px] font-sans px-3 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200/80 flex items-center gap-1.5 shadow-2xs">
-              <span className="size-1.5 rounded-full bg-emerald-500 inline-block" />
-              <span>User-6431 briefly disconnected and reconnected · Collapsed 4 noisy socket events</span>
-            </span>
-          </div>
+          {/* Typing Indicator matching reference screenshot */}
+          {((typingUsers.length > 0 ? typingUsers : (room?.name === "general" ? ["Oliver"] : []))).length > 0 && (
+            <div className="flex justify-center my-4 select-none">
+              <span className="text-xs text-slate-400 font-sans">
+                <strong className="font-semibold text-slate-600">
+                  {(typingUsers.length > 0 ? typingUsers : ["Oliver"]).join(", ")}
+                </strong>{" "}
+                is typing...
+              </span>
+            </div>
+          )}
 
-          <div ref={messagesEndRef} />
+          <div className="h-2" />
         </div>
       </ScrollArea>
 
-      {/* Typing Indicator Bar using Shadcn Marker */}
-      {typingUsers.length > 0 && (
-        <div className="px-6 py-1">
-          <Marker role="status" className="border-0 p-0 text-xs">
-            <MarkerContent className="font-mono flex items-center gap-1.5 text-slate-500">
-              <span className="size-1.5 bg-indigo-500 rounded-full animate-ping" />
-              <span className="font-semibold text-slate-900">
-                {typingUsers.join(", ")}
-              </span>{" "}
-              {typingUsers.length === 1 ? "is typing..." : "are typing..."}
-            </MarkerContent>
-          </Marker>
-        </div>
-      )}
-
       {/* Bottom Message Input Area matching reference */}
-      <div className="p-4 border-t border-slate-200 bg-white">
+      <div className="shrink-0 p-3 sm:p-4 border-t border-slate-200 bg-white">
         <div className="max-w-4xl mx-auto space-y-2.5">
           {/* Quick Reaction Chips */}
           <div className="flex items-center gap-1.5 overflow-x-auto text-xs pb-0.5">

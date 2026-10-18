@@ -35,9 +35,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${spaceGrotesk.variable} ${plusJakartaSans.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`${spaceGrotesk.variable} ${plusJakartaSans.variable} ${jetbrainsMono.variable} h-screen w-screen overflow-hidden antialiased`}
     >
-      <body className="h-full flex flex-col bg-background text-foreground antialiased selection:bg-primary/20">
+      <body className="h-screen w-screen overflow-hidden flex flex-col bg-white text-slate-900 antialiased selection:bg-indigo-100">
         <TooltipProvider>{children}</TooltipProvider>
       </body>
     </html>

@@ -38,7 +38,8 @@ export function getInitials(name: string): string {
   const clean = name.trim();
   if (clean.toLowerCase() === 'alex') return 'AL';
   if (clean.toLowerCase() === 'user-1945') return 'US';
-  if (clean.toLowerCase() === 'user-6431') return 'U6';
+  if (clean.toLowerCase() === 'user-6431') return 'US';
+  if (clean.toLowerCase().startsWith('user-')) return 'US';
   if (clean.toLowerCase() === 'oliver') return 'OL';
 
   const parts = clean.split(/[\s-_]+/);

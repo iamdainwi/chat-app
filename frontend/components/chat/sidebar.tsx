@@ -14,7 +14,6 @@ import {
   Search,
   Moon,
   Settings,
-  Sparkles,
 } from "lucide-react";
 import { getAvatarColor, getInitials } from "@/lib/avatar";
 
@@ -24,7 +23,6 @@ interface SidebarProps {
   onSelectRoom: (roomId: string) => void;
   onOpenNewRoomModal: () => void;
   onOpenProfileModal: () => void;
-  onOpenArchitectureModal?: () => void;
   username: string;
   socketConnected: boolean;
 }
@@ -42,7 +40,6 @@ export function Sidebar({
   onSelectRoom,
   onOpenNewRoomModal,
   onOpenProfileModal,
-  onOpenArchitectureModal,
   username,
   socketConnected,
 }: SidebarProps) {
@@ -57,9 +54,9 @@ export function Sidebar({
   const initials = getInitials(username);
 
   return (
-    <aside className="w-72 sm:w-80 h-full flex flex-col bg-[#0b0f17] text-white border-r border-[#1e293b] select-none">
+    <aside className="w-72 sm:w-80 h-full min-h-0 flex flex-col bg-[#0b0f17] text-white border-r border-[#1e293b] select-none">
       {/* Brand Header */}
-      <div className="p-4 border-b border-[#1e293b]">
+      <div className="shrink-0 p-4 border-b border-[#1e293b]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="size-9 rounded-xl bg-[#1c2433] border border-[#2d3748] text-white flex items-center justify-center shadow-xs">
@@ -91,7 +88,7 @@ export function Sidebar({
       </div>
 
       {/* Search Input with ⌘K */}
-      <div className="p-3">
+      <div className="shrink-0 p-3">
         <div className="relative">
           <Search className="size-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <Input
@@ -107,7 +104,7 @@ export function Sidebar({
       </div>
 
       {/* Scrollable Navigation Sections */}
-      <ScrollArea className="flex-1 px-3">
+      <ScrollArea className="flex-1 min-h-0 px-3">
         {/* Channels Section */}
         <div className="mb-4">
           <div className="px-1 py-1 flex items-center justify-between text-[11px] font-mono font-semibold uppercase tracking-wider text-slate-400">
@@ -187,27 +184,10 @@ export function Sidebar({
             ))}
           </div>
         </div>
-
-        {/* Shadcn UI Architecture Card */}
-        <div className="p-3 rounded-xl bg-[#121927] border border-[#222f42] text-xs text-slate-300 mb-4">
-          <div className="flex items-center gap-1.5 font-semibold text-white mb-1">
-            <Sparkles className="size-3.5 text-indigo-400" />
-            <span>shadcn/ui Architecture</span>
-          </div>
-          <p className="text-[11px] text-slate-400 leading-relaxed mb-2.5">
-            Built with composable <code className="text-indigo-300">&lt;Message&gt;</code>, <code className="text-indigo-300">&lt;Bubble&gt;</code> &amp; <code className="text-indigo-300">&lt;Marker&gt;</code> primitives.
-          </p>
-          <button
-            onClick={onOpenArchitectureModal}
-            className="w-full py-1.5 px-2 rounded-md bg-[#1a2334] hover:bg-[#232f45] border border-[#2a3850] text-[11px] font-medium text-white transition-colors"
-          >
-            View UI Audit &amp; Changes
-          </button>
-        </div>
       </ScrollArea>
 
       {/* User Status Profile Bar */}
-      <div className="p-3 bg-[#0e1420] border-t border-[#1e293b] flex items-center justify-between">
+      <div className="shrink-0 p-3 bg-[#0e1420] border-t border-[#1e293b] flex items-center justify-between">
         <div
           onClick={onOpenProfileModal}
           className="flex items-center gap-2.5 cursor-pointer hover:opacity-85 transition-opacity min-w-0"

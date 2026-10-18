@@ -36,9 +36,9 @@ export function MembersDrawer({
   });
 
   return (
-    <div className="w-72 sm:w-80 h-full border-l border-border bg-white text-foreground flex flex-col select-none">
+    <div className="w-72 sm:w-80 h-full min-h-0 border-l border-border bg-white text-foreground flex flex-col select-none">
       {/* Header */}
-      <div className="p-4 border-b border-border flex items-center justify-between">
+      <div className="shrink-0 p-4 border-b border-border flex items-center justify-between">
         <span className="text-xs font-mono font-semibold uppercase tracking-wider text-muted-foreground">
           CHANNEL MEMBERS ({memberList.length})
         </span>
@@ -53,7 +53,7 @@ export function MembersDrawer({
       </div>
 
       {/* Member Cards */}
-      <ScrollArea className="flex-1 p-3">
+      <ScrollArea className="flex-1 min-h-0 p-3">
         <div className="space-y-2">
           {memberList.map((m) => {
             const avatarColor = getAvatarColor(m.username);
@@ -92,22 +92,6 @@ export function MembersDrawer({
           })}
         </div>
       </ScrollArea>
-
-      {/* Shadcn Primitives Active Info Card */}
-      <div className="p-3 border-t border-border bg-white">
-        <div className="p-3.5 rounded-xl bg-[#f8faff] border border-indigo-100 text-xs">
-          <div className="font-heading font-semibold text-slate-800 mb-2">
-            shadcn Primitives Active
-          </div>
-          <div className="space-y-1 font-mono text-[11px] text-indigo-700">
-            <div>• &lt;Message align=&quot;end&quot;&gt;</div>
-            <div>• &lt;Bubble variant=&quot;muted&quot;&gt;</div>
-            <div>• &lt;BubbleGroup&gt;</div>
-            <div>• &lt;BubbleReactions&gt;</div>
-            <div>• &lt;Marker role=&quot;status&quot;&gt;</div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

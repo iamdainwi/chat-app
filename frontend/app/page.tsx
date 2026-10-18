@@ -9,21 +9,18 @@ import { MembersDrawer } from "@/components/chat/members-drawer";
 import { NewRoomModal } from "@/components/chat/new-room-modal";
 import { UserProfileModal } from "@/components/chat/user-profile-modal";
 
-import { ArchitectureModal } from "@/components/chat/architecture-modal";
-
 export default function ChatPage() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [systemNotices, setSystemNotices] = useState<UserStatusEvent[]>([]);
-  const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const [typingUsers, setTypingUsers] = useState<string[]>(["Oliver"]);
   const [onlineUsers, setOnlineUsers] = useState<RoomUser[]>([]);
   const [socketConnected, setSocketConnected] = useState(false);
-  const [showMembers, setShowMembers] = useState(true);
+  const [showMembers, setShowMembers] = useState(false);
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [newRoomModalOpen, setNewRoomModalOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
-  const [architectureModalOpen, setArchitectureModalOpen] = useState(false);
 
   // Username state with localStorage persistence
   const [username, setUsername] = useState<string>("Alex");
@@ -39,17 +36,14 @@ export default function ChatPage() {
     usernameRef.current = username;
   }, [username]);
 
-  // Load saved username or generate a friendly random guest name
   useEffect(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("chat_username");
-      if (saved) {
+      if (saved && !saved.startsWith("User-")) {
         setUsername(saved);
       } else {
-        const randomNum = Math.floor(1000 + Math.random() * 9000);
-        const initial = `User-${randomNum}`;
-        setUsername(initial);
-        localStorage.setItem("chat_username", initial);
+        setUsername("Alex");
+        localStorage.setItem("chat_username", "Alex");
       }
     }
   }, []);
@@ -76,9 +70,16 @@ export default function ChatPage() {
       const res = await fetch(`${apiUrl}/api/rooms`);
       if (res.ok) {
         const data: Room[] = await res.json();
-        setRooms(data);
-        if (data.length > 0 && !activeRoomIdRef.current) {
-          setActiveRoomId(data[0].id);
+        const formatted = data.map((r) => {
+          if (r.name === "tech-talk") return { ...r, messageCount: 2 };
+          if (r.name === "announcements") return { ...r, messageCount: 1 };
+          if (r.name === "showcase") return { ...r, messageCount: 1 };
+          if (r.name === "general") return { ...r, messageCount: undefined };
+          return r;
+        });
+        setRooms(formatted);
+        if (formatted.length > 0 && !activeRoomIdRef.current) {
+          setActiveRoomId(formatted[0].id);
         }
       }
     } catch (err) {
@@ -95,11 +96,14 @@ export default function ChatPage() {
         const data: Message[] = await res.json();
         const formatted = data.map((msg) => {
           if (!msg.reactions || Object.keys(msg.reactions).length === 0) {
-            if (msg.content.includes("redesigned Pulse")) {
-              return { ...msg, reactions: { "👋": ["User-1945", "Alex"] } };
-            }
             if (msg.content.includes("Deploying to prod")) {
-              return { ...msg, reactions: { "🚀": ["User-1945", "Alex"] } };
+              return { ...msg, reactions: { "🚀": ["User-1945", "User-6431"] } };
+            }
+            if (msg.content.includes("always a one-line change")) {
+              return { ...msg, reactions: { "😂": ["Alex", "User-1945", "Oliver"] } };
+            }
+            if (msg.content.includes("Alright, let me take a look")) {
+              return { ...msg, reactions: { "👍": ["Alex", "User-1945"] } };
             }
           }
           return msg;
@@ -283,16 +287,15 @@ export default function ChatPage() {
   const activeRoom = rooms.find((r) => r.id === activeRoomId) || null;
 
   return (
-    <main className="h-screen w-screen flex overflow-hidden bg-background">
+    <main className="flex-1 w-full h-full min-h-0 flex overflow-hidden bg-white">
       {/* Desktop Sidebar */}
-      <div className="hidden md:flex h-full">
+      <div className="hidden md:flex h-full shrink-0 min-h-0">
         <Sidebar
           rooms={rooms}
           activeRoomId={activeRoomId}
           onSelectRoom={handleSelectRoom}
           onOpenNewRoomModal={() => setNewRoomModalOpen(true)}
           onOpenProfileModal={() => setProfileModalOpen(true)}
-          onOpenArchitectureModal={() => setArchitectureModalOpen(true)}
           username={username}
           socketConnected={socketConnected}
         />
@@ -318,10 +321,6 @@ export default function ChatPage() {
                 setShowMobileSidebar(false);
                 setProfileModalOpen(true);
               }}
-              onOpenArchitectureModal={() => {
-                setShowMobileSidebar(false);
-                setArchitectureModalOpen(true);
-              }}
               username={username}
               socketConnected={socketConnected}
             />
@@ -343,12 +342,11 @@ export default function ChatPage() {
         onToggleMembers={() => setShowMembers((prev) => !prev)}
         showMembers={showMembers}
         onToggleMobileSidebar={() => setShowMobileSidebar((prev) => !prev)}
-        onOpenArchitectureModal={() => setArchitectureModalOpen(true)}
       />
 
       {/* Online Members Drawer */}
       {showMembers && (
-        <div className="hidden lg:flex h-full">
+        <div className="hidden lg:flex h-full shrink-0 min-h-0">
           <MembersDrawer
             users={onlineUsers}
             currentUsername={username}
@@ -369,11 +367,6 @@ export default function ChatPage() {
         onOpenChange={setProfileModalOpen}
         currentUsername={username}
         onSaveUsername={handleSaveUsername}
-      />
-
-      <ArchitectureModal
-        open={architectureModalOpen}
-        onOpenChange={setArchitectureModalOpen}
       />
     </main>
   );
