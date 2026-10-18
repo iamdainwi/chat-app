@@ -1,0 +1,17 @@
+{
+  "name": "chat-app-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel --filter frontend --filter backend dev",
+    "dev:backend": "pnpm --filter backend dev",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "build": "pnpm --recursive build",
+    "db:up": "docker compose up -d postgres",
+    "db:migrate": "pnpm --filter backend prisma:migrate",
+    "db:studio": "pnpm --filter backend prisma:studio",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down"
+  },
+  "packageManager": "pnpm@12.14.0"
+}
