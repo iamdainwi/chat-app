@@ -4,34 +4,40 @@ import { useState, useRef, useEffect } from "react";
 import { Message as MessageType, Room, RoomUser, UserStatusEvent } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Message,
+  MessageAvatar,
   MessageContent,
+  MessageFooter,
   MessageHeader,
-  MessageAvatar
 } from "@/components/ui/message";
-import { Bubble, BubbleContent } from "@/components/ui/bubble";
+import {
+  Bubble,
+  BubbleContent,
+  BubbleGroup,
+  BubbleReactions,
+} from "@/components/ui/bubble";
 import { Marker, MarkerContent } from "@/components/ui/marker";
 import {
   Empty,
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
-  EmptyMedia
+  EmptyMedia,
 } from "@/components/ui/empty";
 import {
   InputGroup,
   InputGroupInput,
   InputGroupAddon,
-  InputGroupButton
+  InputGroupButton,
 } from "@/components/ui/input-group";
 import { Kbd } from "@/components/ui/kbd";
 import {
   Tooltip,
   TooltipContent,
-  TooltipTrigger
+  TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
   Send,
@@ -39,7 +45,8 @@ import {
   Menu,
   Terminal,
   Activity,
-  Zap
+  Smile,
+  Zap,
 } from "lucide-react";
 import { format } from "date-fns";
 import { getAvatarColor, getInitials } from "@/lib/avatar";
@@ -52,6 +59,7 @@ interface ChatAreaProps {
   onlineUsers: RoomUser[];
   currentUsername: string;
   onSendMessage: (content: string) => void;
+  onReactMessage: (messageId: string, emoji: string) => void;
   onTyping: (isTyping: boolean) => void;
   onToggleMembers: () => void;
   showMembers: boolean;
@@ -59,6 +67,7 @@ interface ChatAreaProps {
 }
 
 const QUICK_ACTIONS = ["👋 Hello", "✅ Approved", "🚀 Shipped", "👀 Looking", "🔥 Hotfix"];
+const REACTION_EMOJIS = ["👍", "❤️", "🔥", "🚀", "😂"];
 
 export function ChatArea({
   room,
@@ -68,6 +77,7 @@ export function ChatArea({
   onlineUsers,
   currentUsername,
   onSendMessage,
+  onReactMessage,
   onTyping,
   onToggleMembers,
   showMembers,
@@ -201,7 +211,7 @@ export function ChatArea({
         </div>
       </header>
 
-      {/* Messages Scroll Area */}
+      {/* Messages Scroll Area using Shadcn Message, Bubble, Marker, Avatar */}
       <ScrollArea className="flex-1 px-4 py-4">
         {displayItems.length === 0 ? (
           <div className="py-16 text-center select-none">
@@ -228,8 +238,8 @@ export function ChatArea({
                   <Marker key={`notice-${idx}`} variant="separator" className="my-3 font-mono text-[11px]">
                     <MarkerContent className="px-2.5 py-0.5 rounded bg-secondary text-secondary-foreground border border-border flex items-center gap-1.5">
                       <span className="size-1.5 rounded-full bg-primary" />
-                      <strong className="font-semibold">{notice.username}</strong>
-                      {notice.type === "join" ? "connected" : "disconnected"}
+                      <span className="font-semibold text-foreground">{notice.username}</span>
+                      <span>{notice.type === "join" ? "connected" : "disconnected"}</span>
                     </MarkerContent>
                   </Marker>
                 );
@@ -239,6 +249,7 @@ export function ChatArea({
               const isMe = msg.username === currentUsername;
               const avatarColor = getAvatarColor(msg.username);
               const initials = getInitials(msg.username);
+              const userAvatarUrl = msg.user?.avatar;
 
               let formattedTime = "";
               try {
@@ -247,14 +258,20 @@ export function ChatArea({
                 formattedTime = "";
               }
 
+              const reactionsMap = msg.reactions || {};
+              const hasReactions = Object.keys(reactionsMap).length > 0;
+
               return (
                 <Message
                   key={msg.id || idx}
                   align={isMe ? "end" : "start"}
-                  className="gap-2.5 items-end"
+                  className="group relative"
                 >
-                  <MessageAvatar className="size-8 rounded-md overflow-hidden bg-transparent shrink-0">
+                  <MessageAvatar>
                     <Avatar size="sm" className="size-8 rounded-md">
+                      {userAvatarUrl ? (
+                        <AvatarImage src={userAvatarUrl} alt={msg.username} />
+                      ) : null}
                       <AvatarFallback
                         className={`${avatarColor} text-white font-mono font-bold text-xs rounded-md`}
                       >
@@ -263,25 +280,72 @@ export function ChatArea({
                     </Avatar>
                   </MessageAvatar>
 
-                  <MessageContent className={isMe ? "items-end" : "items-start"}>
-                    <MessageHeader className="gap-2 px-1 font-mono text-[11px]">
-                      <span className="font-semibold text-foreground font-heading">
-                        {isMe ? "YOU" : msg.username}
-                      </span>
-                      <span className="text-muted-foreground text-[10px]">
-                        {formattedTime}
-                      </span>
-                    </MessageHeader>
+                  <MessageContent>
+                    {!isMe && (
+                      <MessageHeader className="font-mono text-[11px] px-1 gap-2">
+                        <span className="font-semibold text-foreground font-heading">
+                          {msg.username}
+                        </span>
+                        <span className="text-muted-foreground text-[10px]">
+                          {formattedTime}
+                        </span>
+                      </MessageHeader>
+                    )}
 
-                    <Bubble variant={isMe ? "default" : "secondary"}>
-                      <BubbleContent className={`text-sm leading-relaxed border ${
-                        isMe
-                          ? "bg-primary text-primary-foreground border-primary rounded-lg"
-                          : "bg-card border-border text-foreground rounded-lg"
+                    <div className="relative group/bubble-container">
+                      <Bubble variant={isMe ? "default" : "muted"}>
+                        <BubbleContent className={isMe ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-foreground"}>
+                          {msg.content}
+                        </BubbleContent>
+
+                        {/* Shadcn BubbleReactions */}
+                        {hasReactions && (
+                          <BubbleReactions
+                            align={isMe ? "end" : "start"}
+                            aria-label="Message reactions"
+                            className="bg-card border border-border shadow-xs"
+                          >
+                            {Object.entries(reactionsMap).map(([emoji, users]) => (
+                              <button
+                                key={emoji}
+                                type="button"
+                                onClick={() => onReactMessage(msg.id, emoji)}
+                                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs transition-colors ${
+                                  users.includes(currentUsername)
+                                    ? "bg-primary/20 text-primary font-semibold"
+                                    : "hover:bg-muted text-foreground"
+                                }`}
+                                title={users.join(", ")}
+                              >
+                                <span>{emoji}</span>
+                                <span className="font-mono text-[10px]">{users.length}</span>
+                              </button>
+                            ))}
+                          </BubbleReactions>
+                        )}
+                      </Bubble>
+
+                      {/* Hover Quick Reaction Toolbar */}
+                      <div className={`absolute top-0 opacity-0 group-hover/bubble-container:opacity-100 transition-opacity flex items-center gap-0.5 p-0.5 rounded-md bg-card border border-border shadow-md z-20 ${
+                        isMe ? "-left-28 -translate-y-1" : "-right-28 -translate-y-1"
                       }`}>
-                        {msg.content}
-                      </BubbleContent>
-                    </Bubble>
+                        {REACTION_EMOJIS.map((emoji) => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            onClick={() => onReactMessage(msg.id, emoji)}
+                            className="size-6 flex items-center justify-center text-xs hover:bg-muted rounded transition-transform active:scale-90"
+                            title={`React with ${emoji}`}
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <MessageFooter className="text-[10px] font-mono text-muted-foreground">
+                      {isMe ? `Delivered • ${formattedTime}` : formattedTime}
+                    </MessageFooter>
                   </MessageContent>
                 </Message>
               );
@@ -291,18 +355,20 @@ export function ChatArea({
         )}
       </ScrollArea>
 
-      {/* Typing Indicator Bar */}
-      <div className="px-4 py-1 min-h-[22px] flex items-center text-xs font-mono text-muted-foreground">
-        {typingUsers.length > 0 && (
-          <div className="flex items-center gap-2 animate-in fade-in duration-150">
-            <span className="size-1.5 bg-primary rounded-full animate-ping" />
-            <span>
-              <strong className="text-foreground">{typingUsers.join(", ")}</strong>{" "}
+      {/* Typing Indicator Bar using Shadcn Marker */}
+      {typingUsers.length > 0 && (
+        <div className="px-4 py-1">
+          <Marker role="status" className="border-0 p-0 text-xs">
+            <MarkerContent className="font-mono flex items-center gap-1.5 text-muted-foreground">
+              <span className="size-1.5 bg-primary rounded-full animate-ping" />
+              <span className="font-semibold text-foreground">
+                {typingUsers.join(", ")}
+              </span>{" "}
               {typingUsers.length === 1 ? "is typing..." : "are typing..."}
-            </span>
-          </div>
-        )}
-      </div>
+            </MarkerContent>
+          </Marker>
+        </div>
+      )}
 
       {/* Message Input Footer with Shadcn InputGroup & Kbd */}
       <div className="p-3 border-t border-border bg-card">

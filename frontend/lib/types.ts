@@ -21,6 +21,7 @@ export interface Message {
   roomId: string;
   createdAt: string;
   user?: User | null;
+  reactions?: Record<string, string[]>; // emoji -> array of usernames
 }
 
 export interface RoomUser {

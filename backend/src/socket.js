@@ -131,6 +131,16 @@ export function setupSocketIO(io) {
       });
     });
 
+    // Message reactions
+    socket.on('react_message', ({ messageId, roomId, emoji, username }) => {
+      if (!roomId || !messageId || !emoji) return;
+      io.to(roomId).emit('message_reaction', {
+        messageId,
+        emoji,
+        username: username || 'Someone'
+      });
+    });
+
     // Handle disconnect
     socket.on('disconnect', () => {
       console.log(`[Socket] Client disconnected: ${socket.id}`);

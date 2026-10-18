@@ -160,12 +160,32 @@ export default function ChatPage() {
       });
     }
 
+    function onMessageReaction(data: { messageId: string; emoji: string; username: string }) {
+      setMessages((prev) =>
+        prev.map((msg) => {
+          if (msg.id !== data.messageId) return msg;
+          const currentReactions = { ...(msg.reactions || {}) };
+          const userList = currentReactions[data.emoji] || [];
+          if (userList.includes(data.username)) {
+            currentReactions[data.emoji] = userList.filter((u) => u !== data.username);
+            if (currentReactions[data.emoji].length === 0) {
+              delete currentReactions[data.emoji];
+            }
+          } else {
+            currentReactions[data.emoji] = [...userList, data.username];
+          }
+          return { ...msg, reactions: currentReactions };
+        })
+      );
+    }
+
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("new_message", onNewMessage);
     socket.on("room_users", onRoomUsers);
     socket.on("user_status", onUserStatus);
     socket.on("user_typing", onUserTyping);
+    socket.on("message_reaction", onMessageReaction);
 
     socket.connect();
 
@@ -176,6 +196,7 @@ export default function ChatPage() {
       socket.off("room_users", onRoomUsers);
       socket.off("user_status", onUserStatus);
       socket.off("user_typing", onUserTyping);
+      socket.off("message_reaction", onMessageReaction);
       socket.disconnect();
     };
   }, [fetchRooms]);
@@ -226,6 +247,17 @@ export default function ChatPage() {
       roomId: activeRoomId,
       username,
       isTyping,
+    });
+  };
+
+  const handleReactMessage = (messageId: string, emoji: string) => {
+    if (!activeRoomId) return;
+    const socket = getSocket();
+    socket.emit("react_message", {
+      messageId,
+      roomId: activeRoomId,
+      emoji,
+      username,
     });
   };
 
@@ -287,6 +319,7 @@ export default function ChatPage() {
         onlineUsers={onlineUsers}
         currentUsername={username}
         onSendMessage={handleSendMessage}
+        onReactMessage={handleReactMessage}
         onTyping={handleTyping}
         onToggleMembers={() => setShowMembers((prev) => !prev)}
         showMembers={showMembers}
