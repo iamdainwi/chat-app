@@ -12,28 +12,38 @@ interface MembersDrawerProps {
   onClose?: () => void;
 }
 
-const DEFAULT_MEMBERS = [
-  { username: "Alex", role: "Lead Frontend", isOnline: true },
-  { username: "User-1945", role: "Systems Engineer", isOnline: true },
-  { username: "User-6431", role: "DevOps / SRE", isOnline: true },
-  { username: "Oliver", role: "Staff Reviewer", isOnline: false },
-];
-
 export function MembersDrawer({
   users,
   currentUsername,
   onClose,
 }: MembersDrawerProps) {
-  // Merge live room users with member list
-  const memberList = DEFAULT_MEMBERS.map((m) => {
-    const isCurrentUser = m.username.toLowerCase() === currentUsername.toLowerCase();
-    const liveOnline = users.some((u) => u.username.toLowerCase() === m.username.toLowerCase());
-    return {
-      ...m,
+  // Build dynamic member list from live room users
+  const memberMap = new Map<
+    string,
+    { username: string; isCurrentUser: boolean; isOnline: boolean }
+  >();
+
+  // Include current user
+  if (currentUsername) {
+    memberMap.set(currentUsername.toLowerCase(), {
+      username: currentUsername,
+      isCurrentUser: true,
+      isOnline: true,
+    });
+  }
+
+  // Include all live users in the room
+  users.forEach((u) => {
+    const isCurrentUser =
+      u.username.toLowerCase() === currentUsername.toLowerCase();
+    memberMap.set(u.username.toLowerCase(), {
+      username: u.username,
       isCurrentUser,
-      isOnline: liveOnline || m.isOnline,
-    };
+      isOnline: true,
+    });
   });
+
+  const memberList = Array.from(memberMap.values());
 
   return (
     <div className="w-72 sm:w-80 h-full min-h-0 border-l border-border bg-white text-foreground flex flex-col select-none">
@@ -74,17 +84,22 @@ export function MembersDrawer({
                   </Avatar>
                   <span
                     className={`absolute bottom-0 right-0 size-2.5 rounded-full ring-2 ring-white ${
-                      m.isOnline ? "bg-emerald-500" : "bg-amber-400"
+                      m.isOnline ? "bg-emerald-500" : "bg-slate-400"
                     }`}
                   />
                 </div>
 
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-bold font-sans truncate text-foreground">
-                    {m.username} {m.isCurrentUser && <span className="font-normal text-muted-foreground">(You)</span>}
+                    {m.username}{" "}
+                    {m.isCurrentUser && (
+                      <span className="font-normal text-muted-foreground">
+                        (You)
+                      </span>
+                    )}
                   </div>
                   <div className="text-[11px] text-muted-foreground truncate">
-                    {m.role}
+                    {m.isCurrentUser ? "Online" : "Member"}
                   </div>
                 </div>
               </div>

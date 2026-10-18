@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Room } from "@/lib/types";
+import { Room, RoomUser } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -25,14 +25,8 @@ interface SidebarProps {
   onOpenProfileModal: () => void;
   username: string;
   socketConnected: boolean;
+  onlineUsers?: RoomUser[];
 }
-
-const DIRECT_MESSAGES = [
-  { name: "Alex (You)", role: "Lead Frontend", online: true },
-  { name: "User-1945", role: "Systems Engineer", online: true },
-  { name: "User-6431", role: "DevOps / SRE", online: true },
-  { name: "Oliver", role: "Staff Reviewer", online: false },
-];
 
 export function Sidebar({
   rooms,
@@ -42,8 +36,13 @@ export function Sidebar({
   onOpenProfileModal,
   username,
   socketConnected,
+  onlineUsers = [],
 }: SidebarProps) {
   const [search, setSearch] = useState("");
+
+  const otherUsers = onlineUsers.filter(
+    (u) => u.username.toLowerCase() !== username.toLowerCase()
+  );
 
   const filteredRooms = rooms.filter((r) =>
     r.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -120,7 +119,7 @@ export function Sidebar({
           <div className="space-y-1 mt-1">
             {filteredRooms.map((room) => {
               const isActive = room.id === activeRoomId;
-              const hasBadge = room.messageCount && room.messageCount > 0;
+              const hasBadge = Boolean(room.messageCount && room.messageCount > 0);
               return (
                 <button
                   key={room.id}
@@ -164,24 +163,26 @@ export function Sidebar({
           </div>
 
           <div className="space-y-1 mt-1">
-            {DIRECT_MESSAGES.map((dm) => (
-              <div
-                key={dm.name}
-                className="flex items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-[#151d2c] text-xs text-slate-300 cursor-pointer transition-colors"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <span
-                    className={`size-1.5 rounded-full shrink-0 ${
-                      dm.online ? "bg-emerald-500" : "bg-amber-500"
-                    }`}
-                  />
-                  <span className="truncate font-medium">{dm.name}</span>
+            {otherUsers.length > 0 ? (
+              otherUsers.map((u) => (
+                <div
+                  key={u.socketId || u.username}
+                  className="flex items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-[#151d2c] text-xs text-slate-300 transition-colors"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="size-1.5 rounded-full shrink-0 bg-emerald-500" />
+                    <span className="truncate font-medium">{u.username}</span>
+                  </div>
+                  <span className="text-[10px] text-slate-500 truncate ml-2 font-mono">
+                    Online
+                  </span>
                 </div>
-                <span className="text-[10px] text-slate-500 truncate ml-2 font-mono">
-                  {dm.role}
-                </span>
+              ))
+            ) : (
+              <div className="px-2.5 py-1.5 text-[11px] text-slate-500 italic">
+                No other users online
               </div>
-            ))}
+            )}
           </div>
         </div>
       </ScrollArea>

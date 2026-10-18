@@ -154,17 +154,6 @@ export function ChatArea({
   );
 
   sorted.forEach((msg) => {
-    if (
-      msg.content.includes("one-line change") &&
-      !feedItems.some((f) => f.kind === "notice")
-    ) {
-      feedItems.push({
-        kind: "notice",
-        id: "sys-disconnect",
-        text: "User-6431 briefly disconnected and reconnected · Collapsed 4 noisy socket events",
-      });
-    }
-
     const isMe = msg.username.toLowerCase() === currentUsername.toLowerCase();
     let formattedTime = "12:28 PM";
     try {
@@ -187,7 +176,7 @@ export function ChatArea({
         username: msg.username,
         isMe,
         formattedTime,
-        userAvatarUrl: msg.user?.avatar,
+        userAvatarUrl: msg.user?.avatar || undefined,
         messages: [msg],
       });
     }
@@ -197,7 +186,7 @@ export function ChatArea({
     feedItems.push({
       kind: "notice",
       id: `live-sn-${idx}`,
-      text: `${sn.username} ${sn.type === "join" ? "connected" : "disconnected"}`,
+      text: `${sn.username} ${sn.type === "join" ? "joined the channel" : "left the channel"}`,
     });
   });
 
@@ -241,7 +230,7 @@ export function ChatArea({
             <Users className="size-3.5 text-slate-500" />
             <span className="font-semibold">MEMBERS</span>
             <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-slate-100 text-slate-700 font-mono">
-              4
+              {onlineUsers.length || 1}
             </Badge>
           </Button>
         </div>
@@ -252,8 +241,16 @@ export function ChatArea({
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Messages Feed */}
           {feedItems.length === 0 ? (
-            <div className="py-12 text-center text-xs text-slate-400 font-sans">
-              No previous transmissions in this channel. Send a message to start!
+            <div className="py-20 text-center select-none">
+              <div className="size-12 rounded-2xl bg-slate-100 border border-slate-200 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                <MessageSquare className="size-5 text-indigo-500" />
+              </div>
+              <h3 className="font-heading font-semibold text-sm text-slate-800">
+                Welcome to #{room.name}!
+              </h3>
+              <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
+                This is the start of the #{room.name} channel. Send a message to start chatting!
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -263,10 +260,7 @@ export function ChatArea({
                     <div key={item.id} className="flex justify-center my-4 select-none">
                       <span className="text-[11px] font-sans px-3.5 py-1 rounded-full bg-slate-100/90 text-slate-600 border border-slate-200/60 flex items-center gap-1.5 shadow-2xs">
                         <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" />
-                        <span>
-                          User-6431 briefly disconnected and{" "}
-                          <strong className="font-semibold text-slate-800">reconnected</strong> · Collapsed 4 noisy socket events
-                        </span>
+                        <span>{item.text}</span>
                       </span>
                     </div>
                   );
@@ -386,9 +380,7 @@ export function ChatArea({
 
                       {group.isMe && (
                         <MessageFooter className="text-[11px] font-sans text-slate-400 justify-end pr-1 mt-0.5">
-                          {group.messages.some((m) => m.content.includes("one-line change"))
-                            ? "Delivered · Seen"
-                            : "Delivered"}
+                          Delivered
                         </MessageFooter>
                       )}
                     </MessageContent>
@@ -398,14 +390,14 @@ export function ChatArea({
             </div>
           )}
 
-          {/* Typing Indicator matching reference screenshot */}
-          {((typingUsers.length > 0 ? typingUsers : (room?.name === "general" ? ["Oliver"] : []))).length > 0 && (
+          {/* Typing Indicator */}
+          {typingUsers.length > 0 && (
             <div className="flex justify-center my-4 select-none">
               <span className="text-xs text-slate-400 font-sans">
                 <strong className="font-semibold text-slate-600">
-                  {(typingUsers.length > 0 ? typingUsers : ["Oliver"]).join(", ")}
+                  {typingUsers.join(", ")}
                 </strong>{" "}
-                is typing...
+                {typingUsers.length === 1 ? "is typing..." : "are typing..."}
               </span>
             </div>
           )}

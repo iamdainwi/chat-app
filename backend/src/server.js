@@ -64,57 +64,7 @@ async function seedDefaultRooms() {
       console.log('[Database] Default rooms seeded successfully.');
     }
 
-    const general = await prisma.room.findUnique({ where: { name: 'general' } });
-    if (general) {
-      const msgCount = await prisma.message.count({ where: { roomId: general.id } });
-      if (msgCount === 0) {
-        console.log('[Database] Seeding initial screenshot messages in #general...');
-        const baseTime = new Date();
-        baseTime.setHours(12, 28, 0, 0);
-
-        await prisma.message.create({
-          data: {
-            content: 'Deploying to prod real quick.',
-            username: 'Alex',
-            roomId: general.id,
-            createdAt: new Date(baseTime.getTime()),
-          }
-        });
-        await prisma.message.create({
-          data: {
-            content: "Hello! Wait... It's 4:55 PM. On a Friday.",
-            username: 'User-6431',
-            roomId: general.id,
-            createdAt: new Date(baseTime.getTime() + 60000),
-          }
-        });
-        await prisma.message.create({
-          data: {
-            content: "It's a one-line change.",
-            username: 'Alex',
-            roomId: general.id,
-            createdAt: new Date(baseTime.getTime() + 120000),
-          }
-        });
-        await prisma.message.create({
-          data: {
-            content: "It's always a one-line change 😅.",
-            username: 'User-6431',
-            roomId: general.id,
-            createdAt: new Date(baseTime.getTime() + 180000),
-          }
-        });
-        await prisma.message.create({
-          data: {
-            content: 'Alright, let me take a look.',
-            username: 'User-6431',
-            roomId: general.id,
-            createdAt: new Date(baseTime.getTime() + 185000),
-          }
-        });
-        console.log('[Database] Initial messages seeded successfully.');
-      }
-    }
+    console.log('[Database] Ready.');
   } catch (error) {
     console.warn('[Database] Could not seed rooms (database might be connecting):', error.message);
   }

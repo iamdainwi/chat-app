@@ -14,7 +14,7 @@ export default function ChatPage() {
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [systemNotices, setSystemNotices] = useState<UserStatusEvent[]>([]);
-  const [typingUsers, setTypingUsers] = useState<string[]>(["Oliver"]);
+  const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [onlineUsers, setOnlineUsers] = useState<RoomUser[]>([]);
   const [socketConnected, setSocketConnected] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
@@ -70,16 +70,9 @@ export default function ChatPage() {
       const res = await fetch(`${apiUrl}/api/rooms`);
       if (res.ok) {
         const data: Room[] = await res.json();
-        const formatted = data.map((r) => {
-          if (r.name === "tech-talk") return { ...r, messageCount: 2 };
-          if (r.name === "announcements") return { ...r, messageCount: 1 };
-          if (r.name === "showcase") return { ...r, messageCount: 1 };
-          if (r.name === "general") return { ...r, messageCount: undefined };
-          return r;
-        });
-        setRooms(formatted);
-        if (formatted.length > 0 && !activeRoomIdRef.current) {
-          setActiveRoomId(formatted[0].id);
+        setRooms(data);
+        if (data.length > 0 && !activeRoomIdRef.current) {
+          setActiveRoomId(data[0].id);
         }
       }
     } catch (err) {
@@ -94,21 +87,7 @@ export default function ChatPage() {
       const res = await fetch(`${apiUrl}/api/rooms/${roomId}/messages`);
       if (res.ok) {
         const data: Message[] = await res.json();
-        const formatted = data.map((msg) => {
-          if (!msg.reactions || Object.keys(msg.reactions).length === 0) {
-            if (msg.content.includes("Deploying to prod")) {
-              return { ...msg, reactions: { "🚀": ["User-1945", "User-6431"] } };
-            }
-            if (msg.content.includes("always a one-line change")) {
-              return { ...msg, reactions: { "😂": ["Alex", "User-1945", "Oliver"] } };
-            }
-            if (msg.content.includes("Alright, let me take a look")) {
-              return { ...msg, reactions: { "👍": ["Alex", "User-1945"] } };
-            }
-          }
-          return msg;
-        });
-        setMessages(formatted);
+        setMessages(data);
       }
     } catch (err) {
       console.error("Failed to load room messages:", err);
@@ -298,6 +277,7 @@ export default function ChatPage() {
           onOpenProfileModal={() => setProfileModalOpen(true)}
           username={username}
           socketConnected={socketConnected}
+          onlineUsers={onlineUsers}
         />
       </div>
 
@@ -323,6 +303,7 @@ export default function ChatPage() {
               }}
               username={username}
               socketConnected={socketConnected}
+              onlineUsers={onlineUsers}
             />
           </div>
         </div>
